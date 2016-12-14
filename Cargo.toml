@@ -1,0 +1,6 @@
+[package]
+name = "fp"
+version = "0.1.0"
+authors = ["Vasiliy Horbachenko <shadow.prince@ya.ru>"]
+
+[dependencies]
