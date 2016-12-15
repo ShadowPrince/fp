@@ -4,3 +4,6 @@ version = "0.1.0"
 authors = ["Vasiliy Horbachenko <shadow.prince@ya.ru>"]
 
 [dependencies]
+cpython = { git = "https://github.com/dgrunwald/rust-cpython.git" }
+td_rlua = "0.1.0"
+
