@@ -6,8 +6,12 @@ mod interpreters;
 
 use interpreters::Interpreter;
 
-fn do_work<T: Interpreter>(mut interpreter: T) {
-    interpreter.declare("foo", 1, &*std::env::args().nth(2).unwrap()).unwrap();
+fn do_work<'a, T: Interpreter<'a>>(mut interpreter: T) {
+    let code = std::env::args().nth(2).unwrap();
+    match interpreter.declare("foo", 1, &code) {
+        Ok(_) => {},
+        Err(e) => panic!("{:?}", e),
+    }
 
     let stream = tokenizer::Stream::new("\n", io::stdin());
     for bytes in stream {

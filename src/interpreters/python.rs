@@ -110,7 +110,7 @@ impl Python {
     }
 }
 
-impl Interpreter for Python {
+impl<'time> Interpreter<'time> for Python {
     fn new() -> Self {
         let gil = api::Python::acquire_gil();
 
@@ -131,7 +131,8 @@ impl Interpreter for Python {
 
 
     fn evaluate<T>(&mut self, id: &DecIdentifier, args: &[T]) -> Result<Box<Vec<u8>>>
-        where for<'a> T: super::lua::api::LuaPush
+        where
+            for<'a> T: super::lua::api::Push<&'a mut super::lua::api::Lua<'time>>
             + super::python::api::ToPyObject
             + std::marker::Copy {
         let pyargs = api::PyDict::new(self.py());

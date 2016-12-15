@@ -4,19 +4,26 @@ use std;
 use std::io::Result;
 use std::io::{Error, ErrorKind};
 
-pub extern crate td_rlua as api;
+pub extern crate hlua as api;
 
-/*
 impl ManualInto<Error> for api::LuaError {
     fn manual_into(&self) -> Error {
         Error::new(ErrorKind::Other, format!("{:?}", self))
     }
 }
-*/
 
 impl ManualInto<Vec<u8>> for String {
     fn manual_into(&self) -> Vec<u8> {
         Vec::from(self.as_bytes())
+    }
+}
+
+impl<T: std::marker::Copy> ManualInto<Result<T>> for std::result::Result<T, api::LuaError> {
+    fn manual_into(&self) -> Result<T> {
+        match self {
+            &Ok(ref value) => Ok(*value),
+            &Err(ref e) => Err(e.manual_into()),
+        }
     }
 }
 
@@ -26,11 +33,11 @@ impl ManualInto<Vec<u8>> for i32 {
     }
 }
 
-pub struct Lua {
-    i: api::Lua,
+pub struct Lua<'time> {
+    i: api::Lua<'time>,
 }
 
-impl Lua {
+impl<'time> Lua<'time> {
     fn args_list(&self, n: usize) -> String {
         let mut result = String::new();
         let mut i = 'a' as u8;
@@ -54,12 +61,12 @@ impl Lua {
     fn read_wrapper_var(&mut self) -> Vec<u8> {
         let code = "_wrapper_variable";
 
-        match self.i.query::<String, _>(code) {
+        match self.i.get::<String, _>(code) {
             Some(value) => return value.manual_into(),
             _ => {},
         }
 
-        match self.i.query::<i32, _>(code) {
+        match self.i.get::<i32, _>(code) {
             Some(value) => return value.manual_into(),
             _ => {},
         }
@@ -68,14 +75,11 @@ impl Lua {
     }
 
     fn execute_to_wrapper_var(&mut self, code: &str) -> Result<()> {
-        match self.i.exec_string::<_, ()>(&*format!("_wrapper_variable = {}", code)) {
-            None => Err(Error::new(ErrorKind::Other, "Failed to evaluate function!")),
-            _ => Ok(()),
-        }
+        self.i.execute(&*format!("_wrapper_variable = {}", code)).manual_into()
     }
 }
 
-impl Interpreter for Lua {
+impl<'time> Interpreter<'time> for Lua<'time> {
     fn new() -> Self {
         let mut i = api::Lua::new();
 
@@ -86,18 +90,14 @@ impl Interpreter for Lua {
 
     fn declare(&mut self, id: &DecIdentifier, args: usize, code: &str) -> Result<()> {
         let code = format!("function {}({}) {} end", id, self.args_list(args), code);
-
-        match self.i.exec_string::<&str, ()>(&code) {
-            Some(_) => Ok(()),
-            None => Err(Error::new(ErrorKind::Other, "dunno")),
-        }
+        self.i.execute(&code).manual_into()
     }
 
     fn evaluate<T>(&mut self, id: &DecIdentifier, args: &[T]) -> Result<Box<Vec<u8>>>
-        where for<'a> T: super::lua::api::LuaPush
+        where 
+            for<'a> T: super::lua::api::Push<&'a mut super::lua::api::Lua<'time>>
             + super::python::api::ToPyObject
             + std::marker::Copy {
-
         for i in 0..args.len() {
             let name = self.args_names()[i];
             self.i.set(name, args[i]);

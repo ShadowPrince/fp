@@ -8,11 +8,12 @@ pub enum ImportNamespace {
 }
 
 pub type DecIdentifier = str;
-pub trait Interpreter {
+pub trait Interpreter<'time> {
     fn new() -> Self;
     fn declare(&mut self, identifier: &DecIdentifier, number_of_arguments: usize, inline_code: &str) -> Result<()>;
     fn evaluate<T>(&mut self, id: &DecIdentifier, args: &[T]) -> Result<Box<Vec<u8>>>
-        where for<'a> T: self::lua::api::LuaPush
+        where 
+            for<'a> T: self::lua::api::Push<&'a mut self::lua::api::Lua<'time>>
             + self::python::api::ToPyObject
             + std::marker::Copy;
 
