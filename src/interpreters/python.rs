@@ -4,10 +4,8 @@ use std;
 use std::io::Result;
 use std::io::{Error, ErrorKind};
 use std::ops::Add;
-use std::convert::Into;
 
 pub extern crate cpython as api;
-use self::api::ToPyObject;
 
 struct PythonObject<'a> {
     object: &'a api::PyObject,
@@ -34,19 +32,21 @@ impl ManualInto<Error> for api::PyErr {
     }
 }
 
-pub struct Python {
+pub struct Python<'a> {
     gil: api::GILGuard,
+    env: &'a Environment,
+    arguments: api::PyDict,
 }
 
-impl Python {
+impl<'a> Python<'a> {
     fn py(&self) -> api::Python {
         self.gil.python()
     }
 
     fn args_list(&self, n: usize) -> String {
         let mut result = String::new();
-        let mut i = 'a' as u8;
-        let mut to = i + n as u8;
+        let i = 'a' as u8;
+        let to = i + n as u8;
 
         for i in i .. to {
             result.push(i as char);
@@ -78,7 +78,7 @@ impl Python {
 
         code.push_str(&*format!("{} = lambda ", id));
         code = code.add(&self.args_list(args));
-        code.push_str(&*format!(": {}", inline));
+        code.push_str(&*format!(": {}", &inline[1..]));
 
         code
     }
@@ -96,26 +96,33 @@ impl Python {
     }
 
     fn run(&self, code: &str) -> Result<()> {
+        if self.env.declaration_debug {
+            println!("{:?}", code);
+        }
+
         match self.py().run(code, None, None) {
             Ok(_) => Ok(()),
             Err(e) => Err(e.manual_into()),
         }
     }
 
-    fn eval(&self, code: &str, args: Option<&api::PyDict>) -> Result<api::PyObject> {
-        match self.py().eval(code, None, args) {
+    fn eval(&self, code: &str) -> Result<api::PyObject> {
+        match self.py().eval(code, None, Some(&self.arguments)) {
             Ok(object) => Ok(object),
             Err(e) => Err(e.manual_into()),
         }
     }
 }
 
-impl<'time> Interpreter<'time> for Python {
-    fn new() -> Self {
+impl<'time> Interpreter<'time> for Python<'time> {
+    fn new(env: &'time Environment) -> Self {
         let gil = api::Python::acquire_gil();
+        let pyargs = api::PyDict::new(gil.python());
 
         Python {
             gil: gil,
+            arguments: pyargs,
+            env: env,
         }
     }
 
@@ -129,23 +136,19 @@ impl<'time> Interpreter<'time> for Python {
         self.run(&code)
     }
 
-
-    fn evaluate<T>(&mut self, id: &DecIdentifier, args: &[T]) -> Result<Box<Vec<u8>>>
-        where
-            for<'a> T: super::lua::api::Push<&'a mut super::lua::api::Lua<'time>>
-            + super::python::api::ToPyObject
-            + std::marker::Copy {
-        let pyargs = api::PyDict::new(self.py());
-        for i in 0..args.len() {
-            let name = self.args_names()[i];
-            match pyargs.set_item(self.py(), name, &args[0]) {
-                Err(e) => { return Err(Error::new(ErrorKind::Other, "failed")); },
+    fn pass_argument<T>(&mut self, n: usize, value: T) -> Result<()> where T: api::ToPyObject {
+        let name = self.args_names()[n];
+        match self.arguments.set_item(self.py(), name, &value) {
+            Err(_) => { return Err(Error::new(ErrorKind::Other, "failed")); }, //TODO
                 _ => {},
-            }
         }
 
-        let code = format!("{}({})", id, self.args_list(args.len()));
-        match self.eval(&code, Some(&pyargs)) {
+        Ok(())
+    }
+
+    fn evaluate(&mut self, id: &DecIdentifier, args_count: usize) -> Result<Box<Vec<u8>>> {
+        let code = format!("{}({})", id, self.args_list(args_count));
+        match self.eval(&code) {
             Ok(object) => {
                 let wrapper = PythonObject {
                     object: &object,

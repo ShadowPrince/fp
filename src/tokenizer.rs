@@ -1,18 +1,20 @@
 use std::io::Read;
 use std::iter::Iterator;
 
-pub struct Stream<T> {
+pub struct Stream<'a, T> {
     buf: Box<Vec<u8>>,
+    last_check_position: usize,
     pub stream: T,
-    pub token: &'static str,
+    pub token: &'a str,
 }
 
-impl<T: Read> Stream<T> {
-    pub fn new(token: &'static str, stream: T) -> Stream<T> {
+impl<'a, T: Read> Stream<'a, T> {
+    pub fn new(token: &str, stream: T) -> Stream<T> {
         let buf = Box::new(Vec::<u8>::new());
 
         Stream {
             buf: buf,
+            last_check_position: 0,
             stream: stream,
             token: token,
         }
@@ -34,18 +36,20 @@ impl<T: Read> Stream<T> {
     fn buffer_token_position(&mut self) -> Option<usize> {
         let match_bytes = self.token.as_bytes();
 
-        for i in 0..self.buf.len() {
+        for i in self.last_check_position..self.buf.len() {
             let slice = &self.buf[i..(i+match_bytes.len())];
             if slice == match_bytes {
+                self.last_check_position = 0;
                 return Some(i);
             }
         }
 
+        self.last_check_position = self.buf.len();
         None
     }
 }
 
-impl<T: Read> Iterator for Stream<T> {
+impl<'a, T: Read> Iterator for Stream<'a, T> {
     type Item = Vec<u8>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -79,6 +83,3 @@ impl<T: Read> Iterator for Stream<T> {
         }
     }
 }
-
-
-

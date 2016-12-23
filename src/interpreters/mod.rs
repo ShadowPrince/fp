@@ -1,23 +1,23 @@
 use std;
 use std::io::Result;
-use std::io::{Error, ErrorKind};
 
 pub enum ImportNamespace {
     Separate,
     Current,
 }
 
+pub struct Environment {
+    pub declaration_debug: bool,
+}
+
 pub type DecIdentifier = str;
 pub trait Interpreter<'time> {
-    fn new() -> Self;
+    fn new(env: &'time Environment) -> Self;
     fn declare(&mut self, identifier: &DecIdentifier, number_of_arguments: usize, inline_code: &str) -> Result<()>;
-    fn evaluate<T>(&mut self, id: &DecIdentifier, args: &[T]) -> Result<Box<Vec<u8>>>
-        where 
-            for<'a> T: self::lua::api::Push<&'a mut self::lua::api::Lua<'time>>
-            + self::python::api::ToPyObject
-            + std::marker::Copy;
-
     fn import(&mut self, description: &str, ns: ImportNamespace) -> Result<()>;
+
+    fn pass_argument<T>(&mut self, n: usize, argument: T) -> Result<()> where T: self::python::api::ToPyObject;
+    fn evaluate(&mut self, id: &DecIdentifier, args_count: usize) -> Result<Box<Vec<u8>>>;
 }
 
 // used for some explicit conversions
@@ -26,4 +26,4 @@ pub trait ManualInto<T> {
 }
 
 pub mod python;
-pub mod lua;
+//pub mod lua;

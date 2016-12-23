@@ -40,8 +40,8 @@ pub struct Lua<'time> {
 impl<'time> Lua<'time> {
     fn args_list(&self, n: usize) -> String {
         let mut result = String::new();
-        let mut i = 'a' as u8;
-        let mut to = i + n as u8;
+        let i = 'a' as u8;
+        let to = i + n as u8;
 
         for i in i .. to {
             result.push(i as char);
@@ -81,7 +81,7 @@ impl<'time> Lua<'time> {
 
 impl<'time> Interpreter<'time> for Lua<'time> {
     fn new() -> Self {
-        let mut i = api::Lua::new();
+        let i = api::Lua::new();
 
         Lua {
             i: i,
