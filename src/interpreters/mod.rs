@@ -1,29 +1,29 @@
-use std;
 use std::io::Result;
 
+#[derive(Clone, Copy)]
 pub enum ImportNamespace {
     Separate,
     Current,
 }
 
+#[derive(Clone, Copy)]
 pub struct Environment {
     pub declaration_debug: bool,
 }
 
 pub type DecIdentifier = str;
 pub trait Interpreter<'time> {
-    fn new(env: &'time Environment) -> Self;
+    fn init(&mut self, env: Environment);
     fn declare(&mut self, identifier: &DecIdentifier, number_of_arguments: usize, inline_code: &str) -> Result<()>;
     fn import(&mut self, description: &str, ns: ImportNamespace) -> Result<()>;
 
-    fn pass_argument<T>(&mut self, n: usize, argument: T) -> Result<()> where T: self::python::api::ToPyObject;
-    fn evaluate(&mut self, id: &DecIdentifier, args_count: usize) -> Result<Box<Vec<u8>>>;
+    fn pass_argument(&mut self, n: usize, argument: &Argument) -> Result<()>;
+    fn evaluate(&mut self, id: &DecIdentifier, args_count: usize) -> Result<Box<Argument>>;
 }
 
-// used for some explicit conversions
-pub trait ManualInto<T> {
-    fn manual_into(&self) -> T;
+pub enum Argument {
+    String(String),
+    Number(f32),
 }
 
-pub mod python;
-//pub mod lua;
+pub mod args;

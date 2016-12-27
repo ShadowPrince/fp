@@ -3,15 +3,18 @@ use std::io::Result;
 use std::io::{Error, ErrorKind};
 
 use super::interpreters::Environment;
+use super::interpreters::Argument;
 
 pub enum FunctionName {
     Map,
     MapIndexed,
+    Fold,
 }
 
 pub enum Function {
     Map { code: String },
     MapIndexed { code: String },
+    Fold { code: String, value: Argument },
 }
 
 impl Function {
@@ -19,11 +22,21 @@ impl Function {
         match value {
             "map" => Some(FunctionName::Map),
             "map-indexed" => Some(FunctionName::MapIndexed),
+            "fold" => Some(FunctionName::Fold),
+
             _ => None,
         }
     }
 
-    fn parse_inline_code(slice: &mut Iterator<Item=String>) -> String {
+    pub fn name(&self) -> FunctionName {
+        match self {
+            &Function::Map { code: _ } => FunctionName::Map,
+            &Function::MapIndexed { code: _ } => FunctionName::MapIndexed,
+            &Function::Fold { code: _, value: _ } => FunctionName::Fold,
+        }
+    }
+
+    fn parse_inline_code<T: Iterator<Item=String>>(slice: &mut T) -> String {
         let mut inline = String::new();
         for mut el in slice {
             el = el.replace("#", "\"");
@@ -34,7 +47,17 @@ impl Function {
         inline
     }
 
-    fn parse_arguments(name: FunctionName, slice: &mut Iterator<Item=String>) -> Option<Function> {
+    fn parse_value(s: &String) -> Argument {
+        if let Ok(value) = s.parse::<i32>() {
+            Argument::Number(value as f32)
+        } else if let Ok(value) = s.parse::<f32>() {
+            Argument::Number(value)
+        } else {
+            Argument::String(s.to_owned())
+        }
+    }
+
+    fn parse_arguments<T: Iterator<Item=String>>(name: FunctionName, slice: &mut T) -> Option<Function> {
         match name {
             FunctionName::Map => {
                 let inline = Function::parse_inline_code(slice);
@@ -49,6 +72,27 @@ impl Function {
                     code: inline,
                 })
             },
+
+            FunctionName::Fold => {
+                let initial = Function::parse_value(&slice.nth(0).unwrap());
+                let inline = Function::parse_inline_code(&mut slice.skip(0));
+
+                Some(Function::Fold {
+                    code: inline,
+                    value: initial,
+                })
+            }
+        }
+    }
+
+}
+
+impl Into<FunctionName> for Function {
+    fn into(self) -> FunctionName {
+        match self {
+            Function::Map { code: _ } => FunctionName::Map,
+            Function::MapIndexed { code: _ } => FunctionName::MapIndexed,
+            Function::Fold { code: _, value: _ } => FunctionName::Fold,
         }
     }
 }

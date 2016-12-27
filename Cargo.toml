@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Vasiliy Horbachenko <shadow.prince@ya.ru>"]
 
 [dependencies]
-cpython = { git = "https://github.com/dgrunwald/rust-cpython.git" }
-hlua = "0.1"
-clap = "*"
+libloading = "*"
+
+[lib]
+path = "src/lib.rs"
