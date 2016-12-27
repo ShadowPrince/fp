@@ -1,0 +1,13 @@
+[package]
+name = "fp-plugin-python"
+version = "0.1.0"
+authors = ["Vasiliy Horbachenko <shadow.prince@ya.ru>"]
+
+[lib]
+crate-type = ["dylib"]
+
+[dependencies.fp]
+path = ".."
+
+[dependencies]
+cpython = { git = "https://github.com/dgrunwald/rust-cpython.git" }

@@ -86,7 +86,7 @@ fn main() {
     let args = args::parse_arguments().unwrap();
     let mut stream = tokenizer::Stream::new(&args.separator, io::stdin());
 
-    let mut interpreter = plugins::load("/Users/sp/projects/rust/fp-python/target/debug/libfp_python.dylib");
+    let mut interpreter = plugins::load("plugin-python/target/debug/libfp_plugin_python.dylib");
     process_function(&args, &mut stream, &mut interpreter);
 
     println!("attempt to drop");
