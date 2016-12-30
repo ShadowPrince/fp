@@ -86,19 +86,6 @@ fn main() {
     let args = args::parse_arguments().unwrap();
     let mut stream = tokenizer::Stream::new(&args.separator, io::stdin());
 
-    let mut interpreter = plugins::load("plugin-python/target/debug/libfp_plugin_python.dylib");
+    let mut interpreter = plugins::load("fp-plugin-python/target/debug/libfp_plugin_python.dylib");
     process_function(&args, &mut stream, &mut interpreter);
-
-    println!("attempt to drop");
-    mem::drop(interpreter);
-    println!("main will now exit");
-    /*
-    if args.is_present("lua") {
-        let mut interpreter = interpreters::lua::Lua::new();
-        run(&mut stream, &mut interpreter, &args);
-    } else {
-    let mut interpreter = interpreters::python::Python::new();
-    run(&mut stream, &mut interpreter, "map");
-    */
-    //}
 }
