@@ -82,6 +82,7 @@ fn process_function<'a, T, S>(args: &args::Arguments, stream: &mut tokenizer::St
     }
 }
 
+
 fn main() {
     let args = args::parse_arguments().unwrap();
     let mut stream = tokenizer::Stream::new(&args.separator, io::stdin());
